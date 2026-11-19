@@ -1,0 +1,9 @@
+/vendor
+/.phpunit.cache
+.phpunit.result.cache
+composer.lock
+.DS_Store
+.idea
+.vscode
+/tests/__fixtures__/dev-null/*
+!/tests/__fixtures__/dev-null/.gitkeep
