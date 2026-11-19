@@ -25,14 +25,19 @@ jobs:
       matrix:
         php: [8.3, 8.4, 8.5]
         laravel: [12.*, 13.*]
-        stability: [prefer-lowest, prefer-stable]
+        # The oldest Statamic the addon supports and the newest stable release.
+        statamic: [6.0.0, latest]
         include:
           - laravel: 12.*
             testbench: 10.*
           - laravel: 13.*
             testbench: 11.*
+        exclude:
+          # Statamic 6.0.0 requires Laravel 12.
+          - statamic: 6.0.0
+            laravel: 13.*
 
-    name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.stability }}
+    name: P${{ matrix.php }} - L${{ matrix.laravel }} - Statamic ${{ matrix.statamic }}
 
     steps:
       - name: Checkout code
@@ -45,45 +50,29 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, fileinfo, sqlite, pdo_sqlite, bcmath, intl, gd, exif
           coverage: none
 
+      - name: Pin Statamic 6.0.0
+        if: matrix.statamic == '6.0.0'
+        # Composer refuses Statamic releases with security advisories by
+        # default, and 6.0.0 has some. Only this CI checkout is affected.
+        run: |
+          composer config audit.block-insecure false
+          composer require "statamic/cms:6.0.0" --no-interaction --no-update
+
       - name: Install dependencies
         run: |
           composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
-          composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress
+          composer update --prefer-stable --prefer-dist --no-interaction --no-progress
+
+      - name: Show Statamic version
+        run: composer show statamic/cms | grep versions
 
       - name: PHPStan
-        if: matrix.stability == 'prefer-stable'
+        if: matrix.statamic == 'latest'
         run: composer analyse
 
       - name: Pint
-        if: matrix.stability == 'prefer-stable'
+        if: matrix.statamic == 'latest'
         run: composer lint:check
-
-      - name: Tests
-        run: composer test:unit
-
-  statamic-minimum:
-    runs-on: ubuntu-latest
-
-    # The oldest Statamic the addon supports. prefer-lowest never installs it:
-    # Composer skips Statamic releases with security advisories.
-    name: P8.3 - L12.* - Statamic 6.0.0
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: 8.3
-          extensions: dom, curl, libxml, mbstring, zip, fileinfo, sqlite, pdo_sqlite, bcmath, intl, gd, exif
-          coverage: none
-
-      - name: Install dependencies
-        run: |
-          composer config audit.block-insecure false
-          composer require "statamic/cms:6.0.0" "laravel/framework:12.*" "orchestra/testbench:10.*" --no-interaction --no-update
-          composer update --prefer-stable --prefer-dist --no-interaction --no-progress
 
       - name: Tests
         run: composer test:unit
