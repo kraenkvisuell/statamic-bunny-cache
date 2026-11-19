@@ -30,7 +30,7 @@ BUNNY_API_KEY=your-account-api-key
 BUNNY_PULL_ZONE_ID=1234567
 ```
 
-`BUNNY_API_KEY` is the **account** API key (bunny.net dashboard → Account settings → API), not a storage zone password. Several pull zones (e.g. one per domain) can be given as `BUNNY_PULL_ZONE_ID=123,456`.
+`BUNNY_API_KEY` is the **account** API key (bunny.net dashboard → Account settings → API), not a storage zone password. Several pull zones (e.g. one per domain) can be given as `BUNNY_PULL_ZONE_ID=1234567,1234568`.
 
 That's it: the `bunny` strategy registers itself, there is nothing to add to `config/statamic/static_caching.php`. Without the API key or zone ID, pages are still sent as cacheable, but nothing is purged (a warning is logged), so leave the strategy off locally.
 
