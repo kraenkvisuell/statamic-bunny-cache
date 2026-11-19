@@ -62,7 +62,7 @@ php please bunny:check --fix  # also turns cookie stripping off
 | **Browser cache expiration time** | Match server cache expiration (default) | bunny.net then passes the addon's header to browsers unchanged (`max-age=0`), so a purge reaches everyone at once, while assets keep their own browser cache time. The other options are fixed times for every file, pages included. |
 | **Query string sort** | on (default) | Harmless; one cached copy per set of parameters. |
 | **Cache error response** | off | Errors should never be cached, not even for 5 seconds. |
-| **Vary Cache** | nothing selected, except **URL Query String** if Statamic's `ignore_query_strings` is off | Never **Cookie Value**: that makes every visitor's copy separate. URL Query String must match Statamic, or URL purges miss query string variants. |
+| **Vary Cache** | only **URL Query String**, and only if your site's `config/statamic/static_caching.php` has `'ignore_query_strings' => false` (Statamic's default) | Statamic caches `/page?a=1` and `/page` as separate pages unless `ignore_query_strings` is `true`; bunny.net must do the same, or URL purges miss query string variants. With `true`, select nothing. Never select **Cookie Value**: that makes every visitor's copy separate. |
 | **Vary Cache by Request Headers** | empty | |
 | **Strip response cookies** | off | Otherwise bunny.net strips the session cookie from every response and nobody can log in to the CP. The addon already removes cookies from cached pages. |
 | **Optimize for large object delivery** | off | Only for video and large downloads. |
