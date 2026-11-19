@@ -59,7 +59,7 @@ php please bunny:check --fix  # also turns cookie stripping off
 | --- | --- | --- |
 | **Smart Cache** | off | Smart Cache never caches `text/html`, so it would never cache a page. With it off, bunny.net follows the `Cache-Control` header the addon sets. |
 | **Cache expiration time** | Respect origin Cache-Control | The addon decides what is cached and for how long. With a fixed time, the edge also caches the CP, logins and other private responses. |
-| **Browser cache expiration time** | Match server cache expiration (default) | The other options are fixed times for every file, pages included. Browsers must get pages with `max-age=0` so a purge reaches everyone at once: check with `curl -sI https://your-site/ \| grep -i cache-control`. If bunny.net hands the edge time on to browsers, add an Edge Rule "Override Browser Cache Time" for pages instead. |
+| **Browser cache expiration time** | Match server cache expiration (default) | bunny.net then passes the addon's header to browsers unchanged (`max-age=0`), so a purge reaches everyone at once, while assets keep their own browser cache time. The other options are fixed times for every file, pages included. |
 | **Query string sort** | on (default) | Harmless; one cached copy per set of parameters. |
 | **Cache error response** | off | Errors should never be cached, not even for 5 seconds. |
 | **Vary Cache** | nothing selected, except **URL Query String** if Statamic's `ignore_query_strings` is off | Never **Cookie Value**: that makes every visitor's copy separate. URL Query String must match Statamic, or URL purges miss query string variants. |
@@ -90,14 +90,6 @@ location / {
 }
 ```
 
-### Switching from Statamic's file cache
-
-If the site used full measure caching (`full` strategy) before, two things:
-
-1. **Delete `public/static` on the server once** (`rm -rf public/static`). The `bunny` strategy never writes or deletes these files, and `static:clear` now purges at bunny.net instead of deleting them. As long as the old nginx rules are in place, nginx keeps serving these stale pages from disk without asking PHP, so edits never show up and purges don't help.
-2. **Replace the `@static` rewrite rules** (Forge's "Statamic" site template adds them: `set $try_location @static;`, the two `if` blocks, `location @static` and `location @not_static`) with the default `location /` block above. Without files in `public/static` they only fall through to PHP, but removing them makes sure no stale file is ever served again.
-
-
 In the deploy script, after building the frontend:
 
 ```bash
@@ -105,6 +97,14 @@ php artisan config:cache
 php please static:clear   # purges all pages at bunny.net (cached HTML points to the old CSS/JS)
 php please static:warm    # optional: fills the cache again through bunny.net
 ```
+
+### Switching from Statamic's file cache
+
+If the site used full measure caching (`full` strategy) before, three things:
+
+1. **Delete `public/static` on the server once** (`rm -rf public/static`). The `bunny` strategy never writes or deletes these files, and `static:clear` now purges at bunny.net instead of deleting them. As long as the old nginx rules are in place, nginx keeps serving these stale pages from disk without asking PHP, so edits never show up and purges don't help.
+2. **Replace the `@static` rewrite rules** (Forge's "Statamic" site template adds them: `set $try_location @static;`, the two `if` blocks, `location @static` and `location @not_static`) with the default `location /` block above. Without files in `public/static` they only fall through to PHP, but removing them makes sure no stale file is ever served again.
+3. **Purge the whole pull zone once** after deploying: `php please bunny:purge --zone`. bunny.net may still hold pages it cached before the switch (served by nginx from `public/static`, with bunny.net's default cache time). They have no `CDN-Tag`, so the tag purge after a save never removes them, and the home page in particular can stay stale for weeks. Browsers that got such a copy may keep it too (bunny.net sends them the same long `max-age`), so check with a hard reload.
 
 ## Commands
 
@@ -129,6 +129,7 @@ The `bunny` cacher extends Statamic's `FileCacher`, because Statamic adds the no
 
 - **Anything per visitor** (forms with old input, a logged-in user's name, a cookie banner's state) must be inside `{{ nocache }}` or `@nocache`, exactly like with Statamic's full measure caching.
 - **`php artisan cache:clear`** also deletes the nocache regions Statamic keeps in the cache. Run `php please static:clear` after it, so bunny.net doesn't serve pages whose regions are gone.
+- **Leave `STATAMIC_BACKGROUND_RECACHE` off.** It works, but brings nothing: there is no cached file to keep serving while a page re-renders, so "refreshing" a page just purges it like an invalidation does. With `rules: all` it is worse: Statamic then refreshes the URLs in its own URL list one by one instead of flushing, so the addon purges URL by URL instead of by tag, and misses any page bunny.net holds that Statamic's list doesn't know about (e.g. after `cache:clear`).
 - **Purge rate limits:** bunny.net allows about 300 URL and tag purges and 30 prefix or zone purges per minute per account. The addon retries when it gets a `429`.
 - **Editors** see the cached pages like everybody else; Live Preview and draft, private or protected pages are never cached.
 
