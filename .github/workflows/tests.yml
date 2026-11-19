@@ -60,3 +60,30 @@ jobs:
 
       - name: Tests
         run: composer test:unit
+
+  statamic-minimum:
+    runs-on: ubuntu-latest
+
+    # The oldest Statamic the addon supports. prefer-lowest never installs it:
+    # Composer skips Statamic releases with security advisories.
+    name: P8.3 - L12.* - Statamic 6.0.0
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3
+          extensions: dom, curl, libxml, mbstring, zip, fileinfo, sqlite, pdo_sqlite, bcmath, intl, gd, exif
+          coverage: none
+
+      - name: Install dependencies
+        run: |
+          composer config audit.block-insecure false
+          composer require "statamic/cms:6.0.0" "laravel/framework:12.*" "orchestra/testbench:10.*" --no-interaction --no-update
+          composer update --prefer-stable --prefer-dist --no-interaction --no-progress
+
+      - name: Tests
+        run: composer test:unit

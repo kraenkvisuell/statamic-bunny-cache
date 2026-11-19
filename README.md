@@ -9,11 +9,11 @@ Instead of writing pages to `public/static` and serving them with nginx rewrite 
 - `{{ nocache }}` regions and CSRF tokens work exactly like Statamic's full measure caching: the cached page contains placeholders, and a small script fetches the per-visitor parts from your server.
 - No nginx config, no `public/static` folder, no files on the server.
 
-All purges of one request, command or queued job are collected and sent once, after the response has gone out, so saving in the CP stays fast. A failing purge is logged and never breaks a save.
+All purges of one request, command or queued job are collected and sent once, after the response has gone out, so saving in the CP stays fast. This also works in apps upgraded from Laravel 10 that still have an `app/Http/Kernel.php` without Laravel's `InvokeDeferredCallbacks` middleware. A failing purge is logged and never breaks a save.
 
 ## Requirements
 
-- PHP 8.3+, Laravel 12 or 13, Statamic 6
+- PHP 8.3+, Laravel 12 or 13, Statamic 6.0 or later
 - A bunny.net pull zone in front of the whole site (the origin is your Laravel app)
 
 ## Installation
@@ -121,7 +121,7 @@ php please bunny:check [--fix]
 
 The `bunny` cacher extends Statamic's `FileCacher`, because Statamic adds the nocache and CSRF scripts only for file cachers, and then sends even the first visitor the same placeholder page as everybody else. That makes every response the cacher touches safe to share. The cacher never writes or reads a file:
 
-- **Caching a page** records the URL in Statamic's URL list (so invalidation rules work as usual) and marks the response. Right before it is sent, the response gets the edge cache headers and loses its cookies.
+- **Caching a page** records the URL in Statamic's URL list (so invalidation rules work as usual) and marks the response. Right before it is sent, the response gets the edge cache headers, loses its cookies, and its content becomes the version Statamic would have written to the cache file, with nocache and CSRF placeholders. (Since Statamic 6.3.2 Statamic sends that version to the first visitor anyway; before, the first visitor's own nocache regions and CSRF token were in it, and the addon takes care of that.)
 - **Serving a page** never happens on the server: PHP renders every miss, bunny.net serves every hit.
 - **Invalidating** a URL purges it (plus its query string variants Statamic knows about); wildcards become bunny.net prefix purges; flushing the cache purges the cache tag. "Refreshing" (background recache) purges as well, and the next visitor fills the edge.
 
@@ -132,6 +132,14 @@ The `bunny` cacher extends Statamic's `FileCacher`, because Statamic adds the no
 - **Leave `STATAMIC_BACKGROUND_RECACHE` off.** It works, but brings nothing: there is no cached file to keep serving while a page re-renders, so "refreshing" a page just purges it like an invalidation does. With `rules: all` it is worse: Statamic then refreshes the URLs in its own URL list one by one instead of flushing, so the addon purges URL by URL instead of by tag, and misses any page bunny.net holds that Statamic's list doesn't know about (e.g. after `cache:clear`).
 - **Purge rate limits:** bunny.net allows about 300 URL and tag purges and 30 prefix or zone purges per minute per account. The addon retries when it gets a `429`.
 - **Editors** see the cached pages like everybody else; Live Preview and draft, private or protected pages are never cached.
+
+## Support
+
+Questions and bugs: [GitHub issues](https://github.com/kraenkvisuell/statamic-bunny-cache/issues). Please include your Statamic and Laravel versions and the output of `php please bunny:check`.
+
+## Changelog
+
+See the [GitHub releases](https://github.com/kraenkvisuell/statamic-bunny-cache/releases).
 
 ## Testing
 

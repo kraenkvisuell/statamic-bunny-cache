@@ -56,5 +56,12 @@ class ServiceProvider extends AddonServiceProvider
         ], 'bunny-cache-config');
 
         Event::listen(RequestHandled::class, fn (RequestHandled $event) => $this->app->make(EdgeCacheableResponse::class)->handle($event));
+
+        // Purges are deferred until after the response. Laravel only runs
+        // deferred callbacks after a request through its InvokeDeferredCallbacks
+        // middleware, which apps that still have a Laravel 10 app/Http/Kernel.php
+        // usually lack. The app's terminating callbacks run in every app, after
+        // that middleware: by then a purge that already ran has nothing left.
+        $this->app->terminating(fn () => $this->app->make(PendingPurge::class)->run());
     }
 }

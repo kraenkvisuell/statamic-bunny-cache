@@ -42,7 +42,7 @@ class BunnyCacher extends FileCacher
 
         $this->cacheUrl($this->makeHash($url), ...$this->getPathAndDomain($url));
 
-        app(EdgeCacheableResponse::class)->mark();
+        app(EdgeCacheableResponse::class)->mark($this->normalizeContent($content));
     }
 
     public function hasCachedPage(Request $request)

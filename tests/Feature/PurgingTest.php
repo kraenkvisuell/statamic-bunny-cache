@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -144,6 +145,30 @@ it('purges after the response of a real request', function () {
         ->assertSee('saved');
 
     expect(count(tagPurges()) - $before)->toBe(1);
+});
+
+it('purges after the response in apps without the InvokeDeferredCallbacks middleware', function () {
+    fakeBunny();
+    Collection::make('pages')->routes('/{slug}')->save();
+    defer()->invoke();
+    $before = count(tagPurges());
+
+    // Like a Laravel 10 app/Http/Kernel.php that never got the middleware.
+    $this->withoutMiddleware([ValidateCsrfToken::class, InvokeDeferredCallbacks::class])
+        ->post('/save')
+        ->assertOk();
+
+    expect(count(tagPurges()) - $before)->toBe(1);
+});
+
+it('purges only once when both the middleware and the fallback run', function () {
+    fakeBunny();
+    StaticCache::driver()->invalidateUrls(['/plain']);
+
+    defer()->invoke();
+    app()->terminate();
+
+    expect(purgedUrls())->toBe(['http://localhost/plain']);
 });
 
 it('does nothing at bunny.net without credentials, but logs it', function () {
