@@ -82,7 +82,21 @@ Off. It merges simultaneous requests for an uncached URL into one, so two people
 
 ## Deploying
 
-Nothing to do in nginx: the default Laravel site config is all you need. If the site used Statamic's file cache before, remove the `@static` rewrite rules and delete `public/static`.
+Nothing to do in nginx: the default Laravel site config is all you need:
+
+```nginx
+location / {
+    try_files $uri $uri/ /index.php?$query_string;
+}
+```
+
+### Switching from Statamic's file cache
+
+If the site used full measure caching (`full` strategy) before, two things:
+
+1. **Delete `public/static` on the server once** (`rm -rf public/static`). The `bunny` strategy never writes or deletes these files, and `static:clear` now purges at bunny.net instead of deleting them. As long as the old nginx rules are in place, nginx keeps serving these stale pages from disk without asking PHP, so edits never show up and purges don't help.
+2. **Replace the `@static` rewrite rules** (Forge's "Statamic" site template adds them: `set $try_location @static;`, the two `if` blocks, `location @static` and `location @not_static`) with the default `location /` block above. Without files in `public/static` they only fall through to PHP, but removing them makes sure no stale file is ever served again.
+
 
 In the deploy script, after building the frontend:
 
