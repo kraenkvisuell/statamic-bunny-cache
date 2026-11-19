@@ -59,7 +59,7 @@ php please bunny:check --fix  # also turns cookie stripping off
 | --- | --- | --- |
 | **Smart Cache** | off | Smart Cache never caches `text/html`, so it would never cache a page. With it off, bunny.net follows the `Cache-Control` header the addon sets. |
 | **Cache expiration time** | Respect origin Cache-Control | The addon decides what is cached and for how long. With a fixed time, the edge also caches the CP, logins and other private responses. |
-| **Browser cache expiration time** | Match server cache expiration (default) | Browsers must get pages with `max-age=0`, so a purge reaches everyone at once. Check after going live: `curl -sI https://your-site/ \| grep -i cache-control`. |
+| **Browser cache expiration time** | Match server cache expiration (default) | The other options are fixed times for every file, pages included. Browsers must get pages with `max-age=0` so a purge reaches everyone at once: check with `curl -sI https://your-site/ \| grep -i cache-control`. If bunny.net hands the edge time on to browsers, add an Edge Rule "Override Browser Cache Time" for pages instead. |
 | **Query string sort** | on (default) | Harmless; one cached copy per set of parameters. |
 | **Cache error response** | off | Errors should never be cached, not even for 5 seconds. |
 | **Vary Cache** | nothing selected, except **URL Query String** if Statamic's `ignore_query_strings` is off | Never **Cookie Value**: that makes every visitor's copy separate. URL Query String must match Statamic, or URL purges miss query string variants. |
