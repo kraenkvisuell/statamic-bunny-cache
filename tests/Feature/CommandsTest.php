@@ -19,6 +19,8 @@ function healthyZone(array $overrides = []): array
         'PermaCacheStorageZoneId' => 0,
         'IgnoreQueryStrings' => false,
         'EnableOriginShield' => true,
+        'EnableSmartCache' => false,
+        'EnableRequestCoalescing' => false,
     ], $overrides);
 }
 
@@ -81,6 +83,8 @@ it('fails the check when the zone strips cookies, overrides the cache time or us
     'cookies' => [['DisableCookies' => true], 'logins and other sessions break'],
     'cache time' => [['CacheControlMaxAgeOverride' => 3600], 'overridden (3600 s)'],
     'perma-cache' => [['PermaCacheStorageZoneId' => 42], 'cannot purge by tag'],
+    'smart cache' => [['EnableSmartCache' => true], 'it never caches HTML'],
+    'request coalescing' => [['EnableRequestCoalescing' => true], 'get each other'],
 ]);
 
 it('turns cookie stripping off with --fix', function () {

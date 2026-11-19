@@ -51,13 +51,34 @@ php please bunny:check        # report
 php please bunny:check --fix  # also turns cookie stripping off
 ```
 
-| Setting | Must be | Why |
+`--fix` only touches cookie stripping. Set everything else in the bunny.net dashboard under **CDN → your pull zone → Caching**:
+
+### Caching → General
+
+| Setting | Value | Why |
 | --- | --- | --- |
-| Caching → General → **Disable cookies** | off | Otherwise bunny.net strips the session cookie from every response and nobody can log in to the CP. Cached pages never carry cookies anyway. |
-| Caching → General → **Cache expiration time** | Respect origin Cache-Control | The addon decides what is cached. With a fixed override the edge also caches the CP and other private responses. |
-| **Perma-Cache** | off | bunny.net can't purge by tag with Perma-Cache. |
-| **Vary by query string** | match Statamic's `ignore_query_strings` | Otherwise URL purges miss query string variants. |
-| **Origin Shield** | on (recommended) | Edge locations fetch from the shield instead of each asking your server to render the page, and `static:warm` fills the shield for all of them. |
+| **Smart Cache** | off | Smart Cache never caches `text/html`, so it would never cache a page. With it off, bunny.net follows the `Cache-Control` header the addon sets. |
+| **Cache expiration time** | Respect origin Cache-Control | The addon decides what is cached and for how long. With a fixed time, the edge also caches the CP, logins and other private responses. |
+| **Browser cache expiration time** | Match server cache expiration (default) | Browsers must get pages with `max-age=0`, so a purge reaches everyone at once. Check after going live: `curl -sI https://your-site/ \| grep -i cache-control`. |
+| **Query string sort** | on (default) | Harmless; one cached copy per set of parameters. |
+| **Cache error response** | off | Errors should never be cached, not even for 5 seconds. |
+| **Vary Cache** | nothing selected, except **URL Query String** if Statamic's `ignore_query_strings` is off | Never **Cookie Value**: that makes every visitor's copy separate. URL Query String must match Statamic, or URL purges miss query string variants. |
+| **Vary Cache by Request Headers** | empty | |
+| **Strip response cookies** | off | Otherwise bunny.net strips the session cookie from every response and nobody can log in to the CP. The addon already removes cookies from cached pages. |
+| **Optimize for large object delivery** | off | Only for video and large downloads. |
+| **Stale Cache** | **While Origin Offline** recommended | Keeps serving cached pages while your server is down. |
+
+### Caching → Perma-Cache
+
+Off. bunny.net can't purge by tag with Perma-Cache.
+
+### Caching → Origin shield
+
+On (recommended). Edge locations fetch from the shield instead of each asking your server to render the page, and `static:warm` fills the shield for all of them.
+
+### Caching → Request coalescing
+
+Off. It merges simultaneous requests for an uncached URL into one, so two people loading the same CP page or other private response at the same moment could get each other's.
 
 ## Deploying
 

@@ -59,6 +59,10 @@ class CheckCommand extends Command
             $this->passes('Cookie stripping', 'off');
         }
 
+        ($zone['EnableSmartCache'] ?? false)
+            ? $this->fails('Smart Cache', 'on: it never caches HTML, so no page is cached; turn it off')
+            : $this->passes('Smart Cache', 'off');
+
         $override = (int) ($zone['CacheControlMaxAgeOverride'] ?? -1);
 
         $override === -1
@@ -79,6 +83,10 @@ class CheckCommand extends Command
         } else {
             $this->passes('Query strings', $statamicIgnores ? 'ignored on both sides' : 'vary on both sides');
         }
+
+        ($zone['EnableRequestCoalescing'] ?? false)
+            ? $this->fails('Request coalescing', 'on: simultaneous requests for an uncached private page (e.g. the CP) can get each other\'s response; turn it off')
+            : $this->passes('Request coalescing', 'off');
 
         ($zone['EnableOriginShield'] ?? false)
             ? $this->passes('Origin Shield', 'on')
